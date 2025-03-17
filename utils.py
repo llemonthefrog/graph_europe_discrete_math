@@ -1,4 +1,5 @@
 from collections import deque
+import networkx as nt
 
 def get_degrees(graph):
     degrees = []
@@ -26,11 +27,11 @@ def get_distance(graph, vertex):
     
     return distances
 
-def dfs(graph, start, visited):
+def ddfs(graph, start, visited):
     visited.add(start)
     for neighbor in graph.neighbors(start):
         if neighbor not in visited:
-            dfs(graph, neighbor, visited)
+            ddfs(graph, neighbor, visited)
 
 
 def count_connected_components(graph):
@@ -39,7 +40,7 @@ def count_connected_components(graph):
 
     for vertex in graph.nodes():
         if vertex not in visited:
-            dfs(graph, vertex, visited)
+            ddfs(graph, vertex, visited)
             connected_components += 1
 
     return connected_components
@@ -83,7 +84,8 @@ def analyze_graph(graph):
     centers = get_centers(graph, eccentricities, radius)
 
     cyclomatic_number = calculate_cyclomatic_number(graph)
-       
+    
+    print("Degrees", get_degrees(graph))
     print("Radius:", radius)
     print("Diameter:", diameter)
     print("Centers:", centers)
@@ -114,4 +116,119 @@ def chromatic_number(graph):
         return -1 
 
     nodes = list(graph.nodes)
-    return solve_coloring(0, 0, {})
+    return solve_coloring(0, 0, {}) - 1
+
+def found_artic_points(graph):
+    vertexes = []
+    
+    comp_count: int = count_connected_components(graph)
+    for v in list(graph.nodes):
+        subgraph = graph.copy()
+        subgraph.remove_node(v)
+        
+        sub_comp_count: int = count_connected_components(subgraph)
+        if(sub_comp_count > comp_count):
+            vertexes.append(v)
+            
+    return vertexes
+        
+def found_bridges(graph):
+    bridges = []
+    
+    comp_count: int = count_connected_components(graph)
+    for u, v in list(graph.edges):
+        subgraph = graph.copy()
+        subgraph.remove_edge(u, v)
+        
+        sub_comp_count: int = count_connected_components(subgraph)
+        if(sub_comp_count > comp_count):
+            bridges.append([u, v])
+            
+    return bridges
+
+
+def kruskal_minimum_spanning_tree(graph):
+    edges = sorted(graph.edges(data=True), key=lambda x: x[2]['weight'])
+    
+    parent = {}
+    rank = {}
+    
+    def find(node):
+        if parent[node] != node:
+            parent[node] = find(parent[node])
+        return parent[node]
+
+    def union(node1, node2):
+        root1 = find(node1)
+        root2 = find(node2)
+        
+        if root1 != root2:
+            if rank[root1] > rank[root2]:
+                parent[root2] = root1
+            elif rank[root1] < rank[root2]:
+                parent[root1] = root2
+            else:
+                parent[root2] = root1
+                rank[root1] += 1
+    
+    for node in graph.nodes:
+        parent[node] = node
+        rank[node] = 0
+    
+    mst_graph = nt.Graph()
+    mst_weight = 0
+    
+    for edge in edges:
+        u, v, weight = edge[0], edge[1], edge[2]['weight']
+        if find(u) != find(v):
+            union(u, v)
+            mst_graph.add_edge(u, v, weight=weight)
+            mst_weight += weight
+    
+    return mst_graph, mst_weight
+
+def prufer_code(tree):
+    graph = tree.copy()
+    
+    prufer = []
+    
+    while len(graph.nodes) > 2:
+        leaf = min([node for node in graph.nodes if graph.degree[node] == 1])
+        
+        neighbor = list(graph.neighbors(leaf))[0]
+        prufer.append(neighbor)
+
+        graph.remove_node(leaf)
+    
+    return prufer
+
+def is_eulerian(graph):
+    return nt.is_connected(graph) and all(degree % 2 == 0 for _, degree in graph.degree())
+
+def maximal_eulerian_subgraph(graph):
+    subgraph = graph.copy()
+
+    while not is_eulerian(subgraph):
+        odd_degree_nodes = [node for node, degree in subgraph.degree() if degree % 2 != 0]
+        
+        if len(odd_degree_nodes) <= 1:
+            break
+
+        edge_removed = False
+        for node in odd_degree_nodes:
+            for neighbor in list(subgraph.neighbors(node)):
+                subgraph.remove_edge(node, neighbor)
+                
+                if nt.is_connected(subgraph):
+                    edge_removed = True
+                    break
+                else:
+                    subgraph.add_edge(node, neighbor)
+            
+            if edge_removed:
+                break
+        
+        if not edge_removed:
+            break
+    
+    return subgraph
