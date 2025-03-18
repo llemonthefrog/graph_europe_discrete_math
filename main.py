@@ -73,6 +73,7 @@ def main():
     mst, _ = utils.kruskal_minimum_spanning_tree(sub_weight)
     
     print(utils.prufer_code(mst))
+    print(utils.graph_to_binary_edges(mst))
 
 if __name__ == "__main__":
     main()

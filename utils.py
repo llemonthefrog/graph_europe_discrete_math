@@ -232,3 +232,15 @@ def maximal_eulerian_subgraph(graph):
             break
     
     return subgraph
+
+def graph_to_binary_edges(graph):
+    mapping = {node: idx for idx, node in enumerate(graph.nodes())}
+
+    binary_representation = ""
+    for edge in graph.edges():
+        node1 = mapping[edge[0]]  
+        node2 = mapping[edge[1]]
+        
+        binary_representation += format(node1, '08b') + format(node2, '08b')
+    
+    return binary_representation
